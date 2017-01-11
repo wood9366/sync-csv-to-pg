@@ -1,0 +1,27 @@
+{
+    "hosts": [
+        { "host": "192.168.1.234", "port": 5432, "username": "postgres", "password": "", "database": "ink_sanguo" },
+        { "host": "192.168.1.234", "port": 5432, "username": "postgres", "password": "", "database": "ink-sanguo-sync-test" }
+    ],
+    "tables": [
+        {
+            "name": "advanture_conf",
+            "data": "advanture_config_table.csv",
+            "fields": [
+                { "name": "award_gold", "type": "integer", "map": "ID" },
+                { "name": "award_exp", "type": "integer", "map": "Class" },
+                { "name": "recover_time", "type": "integer", "map": "Star" }
+            ]
+        },
+        {
+            "name": "feast_hero",
+            "data": "feast_hero_table.csv",
+            "fields": [
+                { "name": "group_id", "type": "integer", "map": "GroupID" },
+                { "name": "rarity", "type": "integer", "map": "Rarity" },
+                { "name": "hero_id", "type": "integer", "map": "HeroID" },
+                { "name": "chance", "type": "integer", "map": "Chance" }
+            ]
+        }
+    ]
+}
