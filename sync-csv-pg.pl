@@ -128,10 +128,10 @@ sub sync_table {
                 my $item = $row->[$_];
                 my $type = $table->{fields}[$_]{type};
 
-                if ($item) {
-                    ($type eq "varchar") ? "'$item'" : $item;
+                if ($type eq 'varchar') {
+                    defined($item) ? "'$item'" : "''";
                 } else {
-                    ($type eq "varchar") ? "''" : 0;
+                    defined($item) ? ($item + 0) : 0;
                 }
             } (0..$#{$table->{fields}})) . ")";
 
