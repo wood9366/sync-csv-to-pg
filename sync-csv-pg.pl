@@ -10,56 +10,62 @@ use Data::Dumper;
 
 sub load_csv {
     my $path = shift;
+    my $has_head = shift || 1;
 
-    open(my $fh, "<", $path) or die "can't find csv $path\n";
-
-    my $line_names = <$fh>;
-    my $line_types = <$fh>;
-
-    chomp $line_names;
-
-    chomp $line_types;
-
-
-    sub trim {
-        $_ = shift;
-        s/^\s*"//;
-        s/"\s*$//;
-        $_;
-    }
-
-    my @names = split /","/, $line_names;
-    my @types = split /","/, $line_types;
-
-    @names = map { &trim($_) } @names;
-    @types = map { &trim($_) } @types;
-
-    return if not @names;
-
-    my @fields = map { { name => $names[$_], type => $types[$_] } } (0 .. $#names);
-
-    foreach (@fields) {
-        if ($_->{type} =~ /\[\]$/) {
-            $_->{pgtype} = 'VARCHAR';
-        } else {
-            if ($_->{type} =~ /INT|FLAG|ENUM|BOOL/) {
-                $_->{pgtype} = 'INT';
-            } elsif ($_->{type} =~ /FLOAT/) {
-                $_->{pgtype} = 'REAL';
-            } elsif ($_->{type} =~ /STRING|EXPRESSION|CONDITION/) {
-                $_->{pgtype} = 'VARCHAR';
-            }
-        }
-    }
-
+    my @fields = ();
     my @rows = ();
 
-    while (<$fh>) {
-        chomp;
-        push @rows, [map { &trim($_); } split /","/];
-    }
+    if (-e $path) {
+        open(my $fh, "<", $path);
 
-    close $fh;
+        if ($has_head) {
+            my $line_names = <$fh>;
+            my $line_types = <$fh>;
+
+            chomp $line_names;
+
+            chomp $line_types;
+
+
+            sub trim {
+                $_ = shift;
+                s/^\s*"//;
+                s/"\s*$//;
+                $_;
+            }
+
+            my @names = split /","/, $line_names;
+            my @types = split /","/, $line_types;
+
+            @names = map { &trim($_) } @names;
+            @types = map { &trim($_) } @types;
+
+            return if not @names;
+
+            @fields = map { { name => $names[$_], type => $types[$_] } } (0 .. $#names);
+
+            foreach (@fields) {
+                if ($_->{type} =~ /\[\]$/) {
+                    $_->{pgtype} = 'VARCHAR';
+                } else {
+                    if ($_->{type} =~ /INT|FLAG|ENUM|BOOL/) {
+                        $_->{pgtype} = 'INT';
+                    } elsif ($_->{type} =~ /FLOAT/) {
+                        $_->{pgtype} = 'REAL';
+                    } elsif ($_->{type} =~ /STRING|EXPRESSION|CONDITION/) {
+                        $_->{pgtype} = 'VARCHAR';
+                    }
+                }
+            }
+        }
+
+        while (<$fh>) {
+            chomp;
+            push @rows, [map { &trim($_); } split /","/];
+        }
+
+        close $fh;
+    }
 
     return { fields => \@fields, rows => \@rows };
 }
@@ -171,6 +177,7 @@ sub sync {
     my $host = shift;
     my $tables = shift;
     my $datadir = shift;
+    my $csvdir = shift;
 
     print "info> sync to host $host->{host}:$host->{port}\n";
 
@@ -178,7 +185,9 @@ sub sync {
 
     if ($dbh) {
         foreach my $table (@$tables) {
-            &sync_table($dbh, $table, &load_csv(catfile($datadir, $table->{data})));
+            my $csv = &load_csv(catfile($datadir, $table->{data}));
+            $csv = &load_csv(catfile($csvdir, $table->{data}), 1) if (scalar @{$csv->{rows}} <= 0);
+            &sync_table($dbh, $table, $csv);
         }
 
         $dbh->disconnect;
@@ -191,6 +200,7 @@ sub sync {
 
 my $configpath = shift @ARGV;
 my $datadir = shift @ARGV;
+my $csvdir = shift @ARGV;
 
 my $config = &load_config($configpath);
 # print Dumper($config);
@@ -208,18 +218,18 @@ do {
     }
     print "choose host: ";
     chomp($choose_host_input = <STDIN>);
-} while(not $choose_host_input =~ /\d|\*/);
+} while (not $choose_host_input =~ /\d|\*/);
 
 
 if ($choose_host_input eq '*') {
     foreach my $host (@{$config->{hosts}}) {
-        &sync($host, $config->{tables}, $datadir);
+        &sync($host, $config->{tables}, $datadir, $csvdir);
     }
 } else {
     my $host = $config->{hosts}[$choose_host_input];
 
     if ($host) {
-        &sync($host, $config->{tables}, $datadir);
+        &sync($host, $config->{tables}, $datadir, $csvdir);
     } else {
         print "invalid host, [$choose_host_input]";
     }
