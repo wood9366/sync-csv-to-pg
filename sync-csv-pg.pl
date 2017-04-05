@@ -10,7 +10,9 @@ use Data::Dumper;
 
 sub load_csv {
     my $path = shift;
-    my $has_head = shift || 1;
+    my $has_head = shift;
+
+    $has_head = 1 unless defined($has_head);
 
     my @fields = ();
     my @rows = ();
