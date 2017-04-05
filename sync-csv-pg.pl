@@ -186,7 +186,7 @@ sub sync {
     if ($dbh) {
         foreach my $table (@$tables) {
             my $csv = &load_csv(catfile($datadir, $table->{data}));
-            $csv = &load_csv(catfile($csvdir, $table->{data}), 1) if (scalar @{$csv->{rows}} <= 0);
+            $csv = &load_csv(catfile($csvdir, $table->{data}), 0) if (scalar @{$csv->{rows}} <= 0);
             &sync_table($dbh, $table, $csv);
         }
 
